@@ -26,25 +26,42 @@ export default async function handler(req, res) {
 👥 Кол-во человек: ${people}
   `.trim();
 
+  // Получаем массив chat_id из переменной окружения
+  const chatIds = process.env.TELEGRAM_CHAT_IDS.split(",").map((id) =>
+    id.trim()
+  );
+
   try {
-    const telegramRes = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: process.env.CHAT_ID,
-          text: message,
-          parse_mode: "HTML",
-        }),
-      }
+    // Отправляем сообщение каждому chat_id
+    const telegramRequests = chatIds.map((chatId) =>
+      fetch(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: "HTML",
+          }),
+        }
+      )
     );
 
-    const result = await telegramRes.json();
-    console.log("Telegram ответ:", result);
+    // Ожидаем завершения всех запросов
+    const telegramResponses = await Promise.all(telegramRequests);
+    const results = await Promise.all(
+      telegramResponses.map((response) => response.json())
+    );
 
-    if (!telegramRes.ok) throw new Error("Telegram API error");
+    // Проверяем наличие ошибок
+    for (let i = 0; i < telegramResponses.length; i++) {
+      if (!telegramResponses[i].ok) {
+        throw new Error(`Telegram API error for chat_id ${chatIds[i]}`);
+      }
+    }
 
+    console.log("Telegram ответы:", results);
     res.status(200).json({ ok: true });
   } catch (error) {
     console.error("Ошибка при отправке:", error);
