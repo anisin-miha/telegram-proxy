@@ -26,6 +26,8 @@ export default async function handler(req, res) {
 👥 Кол-во человек: ${people}
   `.trim();
 
+  console.log('TELEGRAM_CHAT_IDS:', process.env.TELEGRAM_CHAT_IDS);
+
   // Получаем массив chat_id из переменной окружения
   const chatIds = process.env.TELEGRAM_CHAT_IDS.split(",").map((id) =>
     id.trim()
