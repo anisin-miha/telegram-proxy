@@ -1,13 +1,13 @@
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
-  // Разрешаем CORS
+  // 👇 Ставим заголовки CORS СРАЗУ
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  // Обрабатываем preflight-запрос
   if (req.method === "OPTIONS") {
+    // 👇 Просто завершаем preflight-запрос
     return res.status(200).end();
   }
 
@@ -15,13 +15,9 @@ export default async function handler(req, res) {
     return res.status(405).send("Method Not Allowed");
   }
 
-  const { message } = req.body; // Теперь ожидаем ТОЛЬКО готовое сообщение
-
-  if (!message) {
-    return res.status(400).json({ error: "Нет текста сообщения" });
-  }
-
   try {
+    const { message } = req.body;
+
     const chatIds = process.env.TELEGRAM_CHAT_IDS.split(",").map((id) => id.trim());
 
     const telegramRequests = chatIds.map((chatId) =>
@@ -41,14 +37,7 @@ export default async function handler(req, res) {
       telegramResponses.map((response) => response.json())
     );
 
-    for (let i = 0; i < telegramResponses.length; i++) {
-      if (!telegramResponses[i].ok) {
-        throw new Error(`Telegram API error for chat_id ${chatIds[i]}`);
-      }
-    }
-
-    console.log("Успешно отправлено:", results);
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, results });
   } catch (error) {
     console.error("Ошибка при отправке:", error);
     res.status(500).json({ error: "Ошибка при отправке в Telegram" });
